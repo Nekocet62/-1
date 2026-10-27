@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Орфоэпия — тренажёр ЕГЭ</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--text:#202638;--muted:#667085;--accent:#4f46e5;--good:#16803c;--bad:#c62828;--line:#dfe3ee}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:780px;margin:0 auto;padding:20px 14px 40px}
+header{margin:8px 0 18px}h1{font-size:clamp(25px,5vw,36px);margin:0 0 5px}p{line-height:1.5}.sub{color:var(--muted);margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,4vw,30px);box-shadow:0 8px 24px #2026380b}
+.topline{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+.progress{height:8px;background:#e9eaf4;border-radius:99px;overflow:hidden;margin:12px 0 24px}.bar{height:100%;width:0;background:var(--accent);transition:width .2s}
+.word-label{text-align:center;color:var(--muted);font-size:14px;margin-bottom:10px}.word{font-size:clamp(31px,8vw,48px);font-weight:750;letter-spacing:.3px;text-align:center;overflow-wrap:anywhere;margin:0 0 24px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}.answer{min-height:62px;border:2px solid var(--line);background:white;border-radius:13px;padding:12px 10px;font:inherit;font-size:clamp(18px,4vw,23px);font-weight:650;cursor:pointer;color:var(--text);transition:.15s}.answer:hover:not(:disabled){border-color:var(--accent);background:#f7f6ff}.answer:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #a5b4fc;outline-offset:2px}.answer.correct{border-color:var(--good);background:#eaf8ef;color:#12652e}.answer.wrong{border-color:var(--bad);background:#fff0f0;color:#a11b1b}.answer:disabled{cursor:default}
+.feedback{margin-top:18px;border-radius:12px;padding:14px;line-height:1.5;display:none}.feedback.show{display:block}.feedback.good{background:#eaf8ef;color:#12652e}.feedback.bad{background:#fff0f0;color:#a11b1b}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.btn{border:0;border-radius:12px;padding:13px 18px;background:var(--accent);color:#fff;font:inherit;font-weight:650;cursor:pointer}.btn.secondary{background:#eceef6;color:var(--text)}.btn:disabled{opacity:.45;cursor:default}
+.settings{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.settings label{font-size:14px;color:var(--muted)}select{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--text)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.stat{background:#f8f9fd;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}.summary h2{margin-top:0}.missed{padding-left:20px}.missed li{margin:8px 0}.small{font-size:13px;color:var(--muted)}
+@media(max-width:430px){.answers{grid-template-columns:1fr}.answer{min-height:54px}.stats{gap:6px}.stat{padding:9px 4px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Орфоэпия: тренажёр ЕГЭ</h1>
+<p class="sub">Выбирай вариант с правильным ударением. Тренируйся на словах из своего словарика.</p>
+</header>
+<div class="settings" id="settings">
+<label for="mode">Раунд:</label>
+<select id="mode"><option value="all">Все слова</option><option value="nouns">Существительные</option><option value="adjectives">Прилагательные</option><option value="verbs">Глаголы</option><option value="participles">Причастия</option><option value="gerunds">Деепричастия</option><option value="adverbs">Наречия</option><option value="mistakes">Только ошибки прошлой игры</option></select>
+<label for="count">Количество:</label>
+<select id="count"><option>10</option><option>20</option><option value="all">Все</option></select>
+<button class="btn" id="start">Начать раунд</button>
+</div>
+<section class="card" id="game">
+<div class="topline"><span id="progressText">Нажми «Начать раунд»</span><span>Очки: <b id="score">0</b></span></div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="word-label">Выбери правильное ударение</div>
+<div class="word" id="word">Готов?</div>
+<div class="answers" id="answers"></div>
+<div class="feedback" id="feedback" aria-live="polite"></div>
+<div class="actions"><button class="btn" id="next" disabled>Следующее слово →</button><button class="btn secondary" id="skip">Пропустить</button></div>
+<p class="small">Подсказка: буква Ё всегда ударная. В остальных вариантах ударение отмечено заглавной гласной. Слова отображаются в исходной форме.</p>
+</section>
+<section class="card summary hidden" id="summary"></section>
+</main>
+<script>
+const raw = [
+["nouns","аэропОрты"],["nouns","бАнты"],["nouns","бОроду"],["nouns","бухгАлтеров"],["nouns","вероисповЕдание"],["nouns","водопровОд"],["nouns","газопровОд"],["nouns","граждАнство"],["nouns","дефИс"],["nouns","диспансЕр"],["nouns","договорЁнность"],["nouns","докумЕнт"],["nouns","досУг"],["nouns","еретИк"],["nouns","жалюзИ"],["nouns","знАчимость"],["nouns","Иксы"],["nouns","каталОг"],["nouns","квартАл"],["nouns","киломЕтр"],["nouns","кОнусов"],["nouns","корЫсть"],["nouns","крАны"],["nouns","кремЕнь"],["nouns","кремнЯ"],["nouns","лЕкторов"],["nouns","лОктя"],["nouns","локтЕй"],["nouns","лыжнЯ"],["nouns","мЕстностей"],["nouns","намЕрение"],["nouns","нарОст"],["nouns","нЕдруг"],["nouns","недУг"],["nouns","некролОг"],["nouns","нЕнависть"],["nouns","нефтепровОд"],["nouns","новостЕй"],["nouns","нОгтя"],["nouns","ногтЕй"],["nouns","Отзыв( о книге )"],["nouns","отзЫв( посла из страны )"],["nouns","Отрочество"],["nouns","партЕр"],["nouns","портфЕль"],["nouns","пОручни"],["nouns","придАное"],["nouns","призЫв"],["nouns","свЁкла"],["nouns","сирОты"],["nouns","созЫв"],["nouns","сосредотОчение"],["nouns","срЕдства"],["nouns","стАтуя"],["nouns","столЯр"],["nouns","тамОжня"],["nouns","тОрты"],["nouns","тУфля"],["nouns","цемЕнт"],["nouns","цЕнтнер"],["nouns","цепОчка"],["nouns","шАрфы"],["nouns","шофЁр"],["nouns","экспЕрт"],
+["adjectives","вернА"],["adjectives","знАчимый"],["adjectives","красИвее"],["adjectives","красИвейший"],["adjectives","кУхонный"],["adjectives","ловкА"],["adjectives","мозаИчный"],["adjectives","оптОвый"],["adjectives","прозорлИвый"],["adjectives","прозорлИва"],["adjectives","слИвовый"],
+["verbs","бралА"],["verbs","бралАсь"],["verbs","взялА"],["verbs","взялАсь"],["verbs","влилАсь"],["verbs","ворвалАсь"],["verbs","воспринЯть"],["verbs","воспринялА"],["verbs","воссоздалА"],["verbs","вручИт"],["verbs","гналА"],["verbs","гналАсь"],["verbs","добралА"],["verbs","добралАсь"],["verbs","дождалАсь"],["verbs","дозвонИтся"],["verbs","дозИровать"],["verbs","ждалА"],["verbs","жилОсь"],["verbs","закУпорить"],["verbs","занЯть"],["verbs","зАнял"],["verbs","занялА"],["verbs","зАняли"],["verbs","заперлА"],["verbs","запломбировАть"],["verbs","защемИт"],["verbs","звалА"],["verbs","звонИт"],["verbs","кАшлянуть"],["verbs","клАла"],["verbs","клЕить"],["verbs","крАлась"],["verbs","кровоточИть"],["verbs","лгалА"],["verbs","лилА"],["verbs","лилАсь"],["verbs","навралА"],["verbs","наделИт"],["verbs","надорвалАсь"],["verbs","назвалАсь"],["verbs","накренИтся"],["verbs","налилА"],["verbs","нарвалА"],["verbs","начАть"],["verbs","нАчал"],["verbs","началА"],["verbs","нАчали"],["verbs","обзвонИт"],["verbs","облегчИть"],["verbs","облегчИт"],["verbs","облилАсь"],["verbs","обнялАсь"],["verbs","обогналА"],["verbs","ободралА"],["verbs","ободрИть"],["verbs","ободрИт"],["verbs","ободрИться"],["verbs","ободрИтся"],["verbs","обострИть"],["verbs","одолжИть"],["verbs","одолжИт"],["verbs","озлОбить"],["verbs","оклЕить"],["verbs","окружИт"],["verbs","опОшлить"],["verbs","освЕдомиться"],["verbs","освЕдомится"],["verbs","отбылА"],["verbs","отдалА"],["verbs","откУпорить"],["verbs","отозвалА"],["verbs","отозвалАсь"],["verbs","перезвонИт"],["verbs","перелилА"],["verbs","плодоносИть"],["verbs","пломбировАть"],["verbs","повторИт"],["verbs","позвалА"],["verbs","позвонИт"],["verbs","полилА"],["verbs","положИть"],["verbs","положИл"],["verbs","понЯть"],["verbs","понялА"],["verbs","послАла"],["verbs","прибЫть"],["verbs","прИбыл"],["verbs","прибылА"],["verbs","прИбыли"],["verbs","принЯть"],["verbs","прИнял"],["verbs","принялА"],["verbs","прИняли"],["verbs","рвалА"],["verbs","сверлИт"],["verbs","снялА"],["verbs","совралА"],["verbs","создалА"],["verbs","сорвалА"],["verbs","сорИт"],["verbs","убралА"],["verbs","углубИть"],["verbs","укрепИт"],["verbs","чЕрпать"],["verbs","щемИт"],["verbs","щЁлкать"],
+["participles","довезЁнный"],["participles","зАгнутый"],["participles","зАнятый"],["participles","занятА"],["participles","зАпертый"],["participles","заселЁнный"],["participles","заселенА"],["participles","кормЯщий"],["participles","кровоточАщий"],["participles","нажИвший"],["participles","налИвший"],["participles","нанЯвшийся"],["participles","начАвший"],["participles","нАчатый"],["participles","низведЁнный"],["participles","облегчЁнный"],["participles","ободрЁнный"],["participles","обострЁнный"],["participles","отключЁнный"],["participles","повторЁнный"],["participles","поделЁнный"],["participles","понЯвший"],["participles","прИнятый"],["participles","принятА"],["participles","приручЁнный"],["participles","прожИвший"],["participles","снятА"],["participles","сОгнутый"],["participles","углублЁнный"],
+["gerunds","закУпорив"],["gerunds","начАв"],["gerunds","начАвшись"],["gerunds","отдАв"],["gerunds","поднЯв"],["gerunds","понЯв"],["gerunds","прибЫв"],["gerunds","создАв"],
+["adverbs","вОвремя"],["adverbs","дОверху"],["adverbs","донЕльзя"],["adverbs","дОнизу"],["adverbs","дОсуха"],["adverbs","зАсветло"],["adverbs","зАтемно"],["adverbs","красИвее"],["adverbs","надОлго"],["adverbs","ненадОлго"]
+];
+const label={nouns:"Существительные",adjectives:"Прилагательные",verbs:"Глаголы",participles:"Причастия и отглагольные прилагательные",gerunds:"Деепричастия",adverbs:"Наречия"};
+const $=id=>document.getElementById(id);
+let deck=[],index=0,score=0,answered=0,missed=[],current=null,locked=false;
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function norm(s){return s.normalize("NFC")}
+function accentInfo(marked){
+  // Uppercase vowel marks stress; Ё is intrinsically stressed in Russian.
+  const chars=[...marked]; let positions=[];
+  chars.forEach((c,i)=>{if("АЕИОУЫЭЮЯ".includes(c))positions.push(i);});
+  if(!positions.length){const yo=chars.findIndex(c=>c==="ё"||c==="Ё");if(yo>=0)positions=[yo];}
+  return {chars,positions};
+}
+function plainWord(marked){return marked.replace(/[АЕИОУЫЭЮЯ]/g,c=>c.toLowerCase()).replace(/Ё/g,"ё")}
+function makeOption(marked,pos){
+  let chars=[...plainWord(marked)];
+  const original=[...marked];
+  let stress=original.findIndex(c=>"АЕИОУЫЭЮЯ".includes(c));
+  if(stress<0) stress=original.findIndex(c=>c==="Ё");
+  if(stress<0) stress=0;
+  let vowelPositions=[];
+  chars.forEach((c,i)=>{if("аеёиоуыэюя".includes(c))vowelPositions.push(i)});
+  let target=vowelPositions[pos];
+  if(target===undefined) target=vowelPositions[0]??0;
+  // Keep ё as ё; mark the selected vowel uppercase, unless it's ё.
+  chars[target]=chars[target]==="ё"?"ё":chars[target].toUpperCase();
+  return chars.join("");
+}
+function correctPosition(marked){
+ const chars=[...marked]; let i=chars.findIndex(c=>"АЕИОУЫЭЮЯ".includes(c));
+ if(i<0)i=chars.findIndex(c=>c==="Ё");
+ const lower=plainWord(marked); let vowelPositions=[];
+ [...lower].forEach((c,j)=>{if("аеёиоуыэюя".includes(c))vowelPositions.push(j)});
+ return Math.max(0,vowelPositions.indexOf(i));
+}
+function start(){
+ const mode=$("mode").value;
+ let source=raw.filter(x=>mode==="all"||x[0]===mode);
+ if(mode==="mistakes"){
+   let saved=JSON.parse(localStorage.getItem("orthoMissed")||"[]");
+   source=raw.filter(x=>saved.includes(x[1]));
+   if(!source.length){alert("Пока нет сохранённых ошибок. Сначала сыграй обычный раунд.");return}
+ }
+ source=shuffle([...source]);
+ const count=$("count").value;
+ deck=count==="all"?source:source.slice(0,Math.min(Number(count),source.length));
+ index=0;score=0;answered=0;missed=[];locked=false;
+ $("score").textContent="0";$("summary").classList.add("hidden");$("game").classList.remove("hidden");
+ render();
+}
+function render(){
+ if(index>=deck.length){finish();return}
+ current=deck[index];locked=false;
+ $("progressText").textContent=`Слово ${index+1} из ${deck.length} · ${label[current[0]]}`;
+ $("bar").style.width=`${index/deck.length*100}%`;
+ $("word").textContent=plainWord(current[1]);
+ $("answers").innerHTML="";$("feedback").className="feedback";$("feedback").textContent="";
+ $("next").disabled=true;
+ const vowels=[..."аеёиоуыэюя"];
+ const word=plainWord(current[1]);
+ const positions=[];[...word].forEach((c,i)=>{if(vowels.includes(c))positions.push(i)});
+ const correct=correctPosition(current[1]);
+ let opts=new Set([correct]);
+ while(opts.size<Math.min(4,positions.length)){
+   opts.add(Math.floor(Math.random()*positions.length));
+ }
+ const optionPositions=shuffle([...opts]);
+ optionPositions.forEach(pos=>{
+   const b=document.createElement("button");b.className="answer";b.textContent=makeOption(current[1],pos);
+   b.addEventListener("click",()=>choose(pos,correct,optionPositions,b));$("answers").appendChild(b);
+ });
+}
+function choose(pos,correct,positions,button){
+ if(locked)return;locked=true;answered++;
+ const buttons=[...$("answers").querySelectorAll("button")];
+ buttons.forEach((b,i)=>{b.disabled=true;if(positions[i]===correct)b.classList.add("correct")});
+ const right=pos===correct;
+ if(right){score++;$("score").textContent=score;$("feedback").className="feedback show good";$("feedback").textContent="Верно! Ударение поставлено правильно."}
+ else{
+   button.classList.add("wrong");missed.push(current[1]);
+   $("feedback").className="feedback show bad";
+   $("feedback").textContent=`Не совсем. Правильный вариант: ${makeOption(current[1],correct)}.`;
+ }
+ localStorage.setItem("orthoMissed",JSON.stringify([...new Set(missed.concat(JSON.parse(localStorage.getItem("orthoMissed")||"[]")))]));
+ $("next").disabled=false;
+}
+function skip(){
+ if(index>=deck.length)return;
+ if(!locked){missed.push(current[1]);localStorage.setItem("orthoMissed",JSON.stringify([...new Set(missed.concat(JSON.parse(localStorage.getItem("orthoMissed")||"[]")))]));}
+ index++;render();
+}
+function finish(){
+ $("bar").style.width="100%";$("game").classList.add("hidden");$("summary").classList.remove("hidden");
+ const pct=answered?Math.round(score/answered*100):0;
+ const missUnique=[...new Set(missed)];
+ $("summary").innerHTML=`<h2>Раунд завершён!</h2><div class="stats"><div class="stat"><b>${score}</b><span>правильных ответов</span></div><div class="stat"><b>${answered}</b><span>отвечено</span></div><div class="stat"><b>${pct}%</b><span>точность</span></div></div>
+ <p>${pct>=90?"Отличный результат!":pct>=70?"Хорошая работа — повтори слова с ошибками.":"Продолжай тренироваться: повторение помогает запомнить ударения."}</p>
+ ${missUnique.length?`<h3>Слова для повторения</h3><ul class="missed">${missUnique.map(w=>`<li>${escapeHtml(w)}</li>`).join("")}</ul>`:"<p>Ошибок в этом раунде нет!</p>"}
+ <div class="actions"><button class="btn" id="again">Ещё раунд</button><button class="btn secondary" id="review">Раунд только с ошибками</button></div>`;
+ $("again").onclick=start;$("review").onclick=()=>{$("mode").value="mistakes";$("count").value="all";start()};
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("start").addEventListener("click",start);$("next").addEventListener("click",()=>{index++;render()});$("skip").addEventListener("click",skip);
+</script>
+</body>
+</html>
